@@ -1852,88 +1852,104 @@ function drawRandomShape(ctx, colorName, opacity, x, y, feather, width) {
 // ============================================================
 // RENDER COMPOSITION
 // ============================================================
+//
+// The eye is always rendered as a circle that fits inside the
+// smallest dimension of the canvas. This ensures that on every
+// aspect ratio — square (print, framed plate, cover), landscape
+// (scarf 3:1, textile 4:3), or portrait (wall 2:3) — the eye
+// remains a complete, clean circle centred in the frame, with
+// no clipping and no distortion.
 
 function renderComposition(canvas, feats, r) {
   const ctx = canvas.getContext('2d');
   const w = canvas.width;
   const h = canvas.height;
 
-  // Background
+  // The composition size is the smaller of the two dimensions.
+  // On a square canvas: size = w = h.
+  // On a landscape canvas: size = h.
+  // On a portrait canvas: size = w.
+  const size = Math.min(w, h);
+  const radius = size / 2;
+
+  // Background fills the whole canvas
   ctx.fillStyle = feats.backgroundColour;
   ctx.fillRect(0, 0, w, h);
 
+  // Centre the eye in the canvas
   ctx.save();
   ctx.translate(w / 2, h / 2);
 
+  // Gradient axis — computed from `size` so it scales correctly
   const A1 = r.rand() * Math.PI;
-  const X1 = w * Math.cos(A1) / 2;
-  const Y1 = w * Math.sin(A1) / 2;
-  const X2 = w * Math.cos(A1 + Math.PI) / 2;
-  const Y2 = w * Math.sin(A1 + Math.PI) / 2;
+  const X1 = size * Math.cos(A1) / 2;
+  const Y1 = size * Math.sin(A1) / 2;
+  const X2 = size * Math.cos(A1 + Math.PI) / 2;
+  const Y2 = size * Math.sin(A1 + Math.PI) / 2;
 
   // Iris base gradient
   const gradient = ctx.createLinearGradient(X1, Y1, X2, Y2);
   gradient.addColorStop(0, feats.Color1[0]);
   gradient.addColorStop(1, feats.Color1[1]);
   ctx.beginPath();
-  ctx.arc(0, 0, w / 2, 0, 2 * Math.PI);
+  ctx.arc(0, 0, radius, 0, 2 * Math.PI);
   ctx.fillStyle = gradient;
   ctx.fill();
 
   // First iris layer
-  const numberOfDivisions1 = r.rand() * 100 + 200;
+  const numberOfDivisions1 = Math.floor(r.rand() * 100 + 200);
   const gradient1 = ctx.createLinearGradient(X1, Y1, X2, Y2);
   gradient1.addColorStop(0, feats.Color1[1]);
   gradient1.addColorStop(1, feats.Color1[2]);
   const Color1 = gradient1;
-  const angle1 = anglesForEqualDivisions(Math.floor(numberOfDivisions1));
+  const angle1 = anglesForEqualDivisions(numberOfDivisions1);
   const points1 = [];
   for (let i = 0; i < angle1.length; i++) {
     const Z1 = r.rand() * 0.5 + 0.5;
-    points1[i] = [Z1 * w / 2 * Math.cos(angle1[i]), Z1 * h / 2 * Math.sin(angle1[i])];
+    points1[i] = [Z1 * radius * Math.cos(angle1[i]), Z1 * radius * Math.sin(angle1[i])];
   }
-  const LineWidth1 = w / (50 + numberOfDivisions1);
+  const LineWidth1 = size / (50 + numberOfDivisions1);
   drawSmoothClosedBezierCurve(ctx, points1, LineWidth1, Color1);
 
   // Second iris layer
-  const numberOfDivisions2 = r.rand() * 2000 + 1000;
+  const numberOfDivisions2 = Math.floor(r.rand() * 2000 + 1000);
   const Color2 = feats.Color1[3];
-  const angle2 = anglesForEqualDivisions(Math.floor(numberOfDivisions2));
+  const angle2 = anglesForEqualDivisions(numberOfDivisions2);
   const points2 = [];
   for (let i = 0; i < angle2.length; i++) {
     const Z2 = r.rand() * 0.75 + 0.25;
-    points2[i] = [Z2 * w / 2 * Math.cos(angle2[i]), Z2 * h / 2 * Math.sin(angle2[i])];
+    points2[i] = [Z2 * radius * Math.cos(angle2[i]), Z2 * radius * Math.sin(angle2[i])];
   }
-  const LineWidth2 = w / (50 + numberOfDivisions2);
+  const LineWidth2 = size / (50 + numberOfDivisions2);
   drawSmoothClosedBezierCurve(ctx, points2, LineWidth2, Color2);
 
   // Third iris layer
-  const numberOfDivisions3 = r.rand() * 2000 + 1000;
+  const numberOfDivisions3 = Math.floor(r.rand() * 2000 + 1000);
   const Color3 = feats.Color1[4];
-  const angle3 = anglesForEqualDivisions(Math.floor(numberOfDivisions3));
+  const angle3 = anglesForEqualDivisions(numberOfDivisions3);
   const points3 = [];
   for (let i = 0; i < angle3.length; i++) {
     const Z3 = r.rand() * 0.8 + 0.2;
-    points3[i] = [Z3 * w / 2 * Math.cos(angle3[i]), Z3 * h / 2 * Math.sin(angle3[i])];
+    points3[i] = [Z3 * radius * Math.cos(angle3[i]), Z3 * radius * Math.sin(angle3[i])];
   }
-  const LineWidth3 = w / (50 + numberOfDivisions3);
+  const LineWidth3 = size / (50 + numberOfDivisions3);
   drawSmoothClosedBezierCurve(ctx, points3, LineWidth3, Color3);
 
   // Pupil
   ctx.beginPath();
-  ctx.arc(0, 0, w / 10, 0, 2 * Math.PI);
+  ctx.arc(0, 0, radius / 5, 0, 2 * Math.PI);
   ctx.fillStyle = '#000000';
-  ctx.shadowBlur = w / 10;
+  ctx.shadowBlur = radius / 5;
   ctx.shadowColor = '#000000';
   ctx.fill();
   ctx.shadowBlur = 0;
 
   // Highlight reflection
   const A = r.rand() * Math.PI / 2 - Math.PI / 4;
-  const B = r.rand() * w / 4 + w / 10;
+  const B = r.rand() * radius / 2 + radius / 5;
   const X = B * Math.cos(A);
   const Y = B * Math.sin(A);
-  const W = r.rand() * w / 10 + w / 10;
+  const W = r.rand() * radius / 5 + radius / 5;
   const Opacity = r.rand() * 0.4 + 0.4;
   drawRandomShape(ctx, '#FFFFFF', Opacity, X, Y, W, W);
 
